@@ -1,0 +1,42 @@
+version: "3.8"
+
+volumes:
+  rabbitmq-data:
+  mongo-db-data:
+
+networks:
+  rabbit-network:
+  mongo-network:
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - 15673:15672
+    environment:
+      - RABBITMQ_DEFAULT_USER=${AMQP_USER}
+      - RABBITMQ_DEFAULT_PASS=${AMQP_PASS}
+    networks:
+      - rabbit-network
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo-db-data:/data/db
+    networks:
+      - mongo-network
+    restart: unless-stopped
+
+  p5r:
+    build: .
+    environment:
+      - TZ=Europe/Copenhagen
+      - MONGO_CONN_URI=mongodb://mongo:27017/?readPreference=primary&ssl=false
+      - RABBITMQ_CONN_URI=amqp://${AMQP_USER}:${AMQP_PASS}@rabbitmq:5672/
+    networks:
+      - rabbit-network
+      - mongo-network
+    restart: unless-stopped

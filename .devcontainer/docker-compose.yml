@@ -1,0 +1,51 @@
+version: "3.8"
+
+volumes:
+  mongo-db-data:
+  rabbitmq-data:
+
+networks:
+  rabbit-network:
+  mongo-network:
+
+
+services:
+  vscode:
+    image: qmcgaw/godevcontainer
+    volumes:
+      - ../:/workspace
+      - ~/.ssh:/home/vscode/.ssh
+      - ~/.ssh:/root/.ssh
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Copenhagen
+      - MONGO_CONN_URI=mongodb://mongo:27017/?readPreference=primary&ssl=false
+      - MONGO_SERVICE_DB=posts-db
+      - RABBITMQ_CONN_URI=amqp://${AMQP_USER}:${AMQP_PASS}@rabbitmq:5672/
+      - JWT_HMAC_SECRET=secret
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    networks:
+      - rabbit-network
+      - mongo-network
+    entrypoint: zsh -c "while sleep 1000; do :; done"
+
+  rabbitmq:
+    extends:
+      file: ../docker-compose.yml
+      service: rabbitmq
+
+  mongo:
+    extends:
+      file: ../docker-compose.yml
+      service: mongo
+
+  mongo-express:
+    image: mongo-express
+    ports:
+      - 8081:8081
+    networks:
+      - mongo-network
+    restart: always
